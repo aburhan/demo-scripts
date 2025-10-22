@@ -1,0 +1,646 @@
+M2VM Transcript
+so this is the demonstration for m2vm which stands for migrate to virtual
+0:05
+machines version five m2vm is a tool which is used for migrating your virtual
+0:10
+machines from your uh cloud platform or from any other
+0:15
+on-premise setup onto gcp it's offered as a managed service on the google cloud
+0:20
+platform it offers high velocity and at scale
+0:24
+migration with minimal downtime during the cut over it's a agentless migration
+0:29
+based on the replication based strategy so let's dive into the demo and
+0:34
+understand how does it work so let's begin with the demo
+0:39
+currently i'm at my gcp console to begin with the migration with m2vm
+0:45
+you first need to enable the api so for that you can simply go on to compute
+0:51
+engine and here we have migrate to virtual machines you can click on it and
+0:56
+enable the api in my case it is already enabled once
+1:00
+you enable the api you will be getting this as the dashboard currently you can
+1:04
+see there are zero migrations and
+1:08
+no source groups or the targets which i have right now in this demo we
+1:14
+will be migrating the aws machines on gcp so for that
+1:21
+i'll go on to the source tab so in the source tab from wherever
+1:26
+you are trying to migrate your virtual machines you can add a source here
+1:31
+currently m2vm supports the sources from vmware
+1:35
+and aws azure is still in preview and it will soon soon be added
+1:41
+so uh i want to migrate from aws so i'll add
+1:45
+aws as the source you can write down the name of the
+1:50
+source uh you can give any name so let's say it's my aws migration
+1:58
+you can give the name as per your requirements you can select the gcp
+2:02
+region where you want your virtual machines after migration to be launched
+2:07
+so in my case i'll select asia south 2 then you will write the region from aws
+2:15
+from where you were wanting that vm to be migrated
+2:19
+so uh going on to my aws console currently i'm having three virtual
+2:24
+machines which are launched in the mumbai region
+2:29
+so i will be migrating these three virtual machines two of them are linux
+2:34
+one virtual machines and one of it is a windows machine so we'll try to migrate
+2:39
+these three vms so i'll go here
+2:43
+and select the region as ap south 2 let's just cross verify
+2:53
+it's ap south 1 so i'll select ap south 1
+2:59
+as the region now i need to enter the access key id
+3:03
+and secret access key for authentication
+3:07
+so um how do we do that
+3:10
+so on your aws console you need to create some permissions which will allow
+3:16
+gcp to create the snapshot and begin the replication of these vms on the gcp
+3:22
+console so for that let's go on to iam currently you can see there's one user
+3:29
+this is my default user we need to create one user for conducting this
+3:34
+migration and to that user we will assign the access key id and the secret
+3:39
+access key which we will use to add on the source
+3:49
+okay so let's add a user here let's give it some
+3:54
+name let's say i'm calling it as a migration
+3:58
+user and then we will add some permissions so
+4:05
+right now we don't have the custom permissions required
+4:09
+for doing this so let's create one let's create a policy
+4:25
+okay so you can select the service as for
+4:28
+which you want to give the access but i'll prefer using
+4:32
+a json object so here in this policy editor we can add
+4:37
+the required permissions which we will allow gcp uh
+4:42
+to access on this aws account so
+4:46
+what permissions would you require you can simply go on to the browser and
+4:51
+write down roles and permissions required for migrate to virtual machines
+4:55
+for accessing aws as a source you will be redirected
+4:59
+to a link which is this link which is
+5:04
+telling you the roles and permissions as the references so there are a lot of
+5:08
+sources that you can use for migrating your vms i will use
+5:14
+the aws source permissions that are required we
+5:19
+can copy this entire json and put on the im console uh but before that let's see
+5:25
+the permissions that are required so you can see here a lot of these permissions
+5:30
+are for describing the instance describing volumes instance type
+5:35
+snapshots creating the tags creating snapshots and stopping of the instance
+5:41
+so this topping means stop instances will be used once we are doing the final
+5:45
+cut over so this is the permissions which we require on the ec2 side
+5:51
+likewise we also require some permissions on the ebs volumes so these
+5:56
+are the permissions which we require on the ebs volume side side
+6:00
+so we can simply copy this these permissions
+6:05
+go to our im console where we have to specify the
+6:09
+permissions and remove this and just copy and paste
+6:15
+okay so in this policy editor i have added all the permissions that are
+6:18
+required for my m2 vm to have an access on
+6:22
+aws i'll click on next
+6:27
+and give this some name
+6:30
+so let's say it's my migration policy
+6:35
+you can add any description if required review these permissions so you can add
+6:41
+any tags if you want and create the policy
+6:46
+so my policy is created here
+6:49
+now i can go and attach this policy to my user
+6:55
+so i'll just do a filtering by the type quick refresh
+7:02
+okay now i can see the migration policy here i can attach this custom policy and
+7:08
+now i'll create the user so this user is created
+7:18
+so once this user is created we will go to this user go to the security
+7:24
+credentials and add the access key so this access
+7:29
+key and secret id we will use on our gcp console here
+7:34
+so let's go back you can select
+7:39
+any of the use cases i'll select others click on next you can give any value
+7:46
+and here is my access key and the secret
+7:49
+access key so let's just copy this and put it on my
+7:56
+gcp console okay
+8:03
+so uh remember to click on done here you can
+8:07
+download the csv file as well i'll download it
+8:11
+click on done only then these keys will be in action
+8:16
+so now if i go back to my users and do a refresh here
+8:23
+so we can see that the access key is active once this is active
+8:28
+you can do a create here for the source creation
+8:32
+you can do any filtering if required by security group or tags
+8:37
+in my case i don't have any so i'll just click on create
+8:44
+so this source can take
+8:47
+up to 15 minutes for becoming active so right now the status is impending
+8:53
+so it will take around 15 minutes
+8:57
+so we can wait till then and
+9:01
+during all this file we can see that all my vms are in the running stage
+9:07
+so let's wait for the source to become active once the source is active i will
+9:13
+be able to see the inventory as per the permissions that we have
+9:17
+provided under this source vm list
+9:22
+so let's wait till the source becomes active
+9:27
+so meanwhile our
+9:31
+source is coming into the active stage
+9:35
+i'll quickly login into each of these three instances and show you their
+9:39
+status so
+9:41
+um this is my vm one which is with the ip
+9:48
+13.233.105 dot so if i'll go here
+9:54
+it's a simple apache server script which i have written so this is giving us a
+9:58
+response of hello world from the internal ip
+10:05
+and similarly if i'll check on the rhelvm2 this is with this public
+10:12
+ip address so this is again in the active stage
+10:17
+giving the response of the hello world from my ip address internal ip address
+10:23
+going back okay i also have one windows vm and
+10:28
+we have the rdp enabled on this so this vm is also looking active
+10:35
+you can see the uh
+10:38
+ip address of this windows server as well
+10:42
+which is 3.110.108.189 the same is the hostname
+10:50
+let's go back to our
+10:53
+gcp console and see if it is coming up now
+11:00
+okay so the source status is now active and
+11:03
+we can see all the three virtual machines which we had in in our
+11:08
+aws account we can see all of them appearing here
+11:13
+so you can see the cpu memory disks which are attached
+11:18
+the storage of those disks operating system wise instance type vpc id
+11:24
+zone tags security groups all of them here
+11:30
+so let's try and begin the migration so i'll put
+11:35
+um i'll try to group the
+11:37
+linux virtual machines in one group so i'll put them
+11:42
+to a group and give this some name like linux
+11:48
+and then i'll add these two vms in one group
+11:56
+you can do the grouping based on any dependencies etc so if you will go under
+12:02
+the groups you can see these groups coming up here
+12:08
+so let's go and begin the migration of
+12:12
+these vms
+12:17
+i'll begin the migration for this windows vm first so
+12:22
+let's add this to the migration as it's a single vm i don't need to add
+12:28
+through any group and i can start with the migration itself so i'm adding this
+12:32
+to migration and if i go back to the migrations tab
+12:39
+i'll see all these three vms and just selecting this to begin with
+12:46
+so i'll
+12:48
+edit the target details of this windows vm in the general you can write on the
+12:54
+name of the instance that you require um for this vm on the gcp site so let's
+13:01
+say i want this to be called as a gcp windows vm
+13:10
+windows vm one you can select the project where you want it to be deployed
+13:15
+i want it in within the same project where i'm logged in currently
+13:19
+you can select the region so let's say i want it in 2a
+13:24
+then you go to machine configuration
+13:27
+and you can select the vm that you want
+13:31
+for the destination
+13:34
+side so i'll select an e2 micro vm
+13:38
+you can select the management like for example on host
+13:43
+maintenance you want this vm to be migrated to some other instance
+13:47
+it is a recommended option but you can choose
+13:50
+to terminate it as well so and an automatic restart i wanted to
+13:55
+be on as it is a recommended practice
+13:59
+go to networking and select the network where you want
+14:04
+within which you want this vm to be hosted
+14:08
+you can select some uh ip address or give some
+14:12
+your own ip address if required for that you need to
+14:17
+edit the vm details once it is migrated then
+14:23
+under the additional configuration you can add a service account here
+14:28
+as per which gcp will be having the access of copying
+14:32
+and replicating the virtual machine disks from the aws side and i'll quickly
+14:38
+tell how this is created so i'll just save the details which i have added
+14:43
+earlier and in another tab i'll open the im section
+14:52
+we can go to the service accounts select the project
+14:58
+here you can simply create a service account
+15:03
+suppose i want a migration
+15:07
+essay this is let's say my second account you can give any name that you
+15:12
+want click on create and continue
+15:17
+and here you can give the basic role of
+15:22
+owner click on continue
+15:26
+and if you want any uses to be added here you can add this
+15:30
+and click on done so when you come back
+15:34
+to the migrate to virtual machines console
+15:38
+click on edit target details go to additional configuration here you
+15:44
+can select the service account that we just created
+15:48
+which is migration is set to i can select that
+15:51
+and you can add the disk type let's say i want
+15:55
+the standard disk only you can add other details for example
+15:59
+licenses sold tendency replication policy
+16:03
+you can edit this as well so by default it is 7200 seconds
+16:09
+and let's click on save so the target details of my windows vm
+16:14
+is ready on the gcp and now only i have to begin the migration
+16:20
+so let's close this and now let's
+16:24
+add it to the migration let's start the
+16:27
+replication so when this replication begins there will be a snapshot of the
+16:33
+virtual machine which is on the aws console
+16:37
+and that snapshot will then be replicated on the gcp side once that
+16:42
+snapshot is replicated we will be able to create the virtual machine from that
+16:47
+snapshot so you can see here the status has gone to first sing initializing
+16:52
+replication so let's
+16:55
+try and migrate the aws rha l vms on gcp so let's edit the target details of
+17:02
+these vms
+17:06
+so we have gcp rtl vm1 and vm2 we can select the project here
+17:15
+select the zone let's say i wanted in 2a and 2b anywhere you can select all this
+17:21
+so it goes for both the vm so i'm doing a common
+17:25
+if you want to if you want to assign the same configuration to
+17:30
+multiple vms you need to group them together the similar kind of vms
+17:34
+otherwise you can do one by one as well you can add all these details go to the
+17:39
+networking section add the
+17:43
+section so like there are multiple vms so i can select
+17:48
+per vmwise these details
+17:54
+and we created migration essay 2 as the
+17:57
+service account so we will use that so tenancy and replication status you can
+18:03
+keep all of them to default and you can change if you
+18:07
+want just click on save once this is saved
+18:11
+we will begin the test clone of these vms as well you can
+18:15
+see that my windows vm the first sync is
+18:20
+completed so you can see
+18:22
+in 11 minutes this is completed the time for the replication depends
+18:29
+upon the disk size now you can see the
+18:33
+aws rha vms have also started replication
+18:37
+so it is showing in the first sink initializing replication so it is going
+18:42
+to take around 10 to 15 minutes for these vms
+18:47
+also to be available so once the replication status of my
+18:52
+windows machine turns to active state then we will begin testing of the clone
+18:59
+so when we do the testing of the clone that means we are enabling gcp uh
+19:05
+the snapshots of the aws side to create a vm on the gcp site so if i go
+19:13
+back to my ec2 and i click on the snapshots
+19:18
+you can see there are three snapshots which are created for all my uh for all
+19:24
+the three vms that i have put for migration so you can see the windows
+19:30
+snapshot which is this second one is now completed just
+19:37
+another interesting thing that we can see here
+19:40
+all my instances here are in the running state so i do not have to
+19:46
+turn these vms in the stopped state to create any snapshot and all any changes
+19:51
+that you create on the uh on these vms uh it will be replicated on my gcp side
+19:59
+uh by a site by a difference of 7200 seconds
+20:03
+so if you remember when we did target details we can set up the
+20:08
+replications uh policy by default it is 7200 seconds if you want a lower cycle
+20:14
+then you can even reduce this so this is uh how you can schedule the policy for
+20:20
+replicating your snapshot from aws to gcp
+20:24
+so now you can see my windows vm is in the active state
+20:29
+now i can begin the testing of the clone so when we click on the test clone
+20:35
+once this is once this operation starts executing
+20:40
+the snapshot which we have taken of the windows vm on the aws side from that
+20:45
+snapshot a vm on the gcp side will be started
+20:51
+so you can see here right now preparing the vm disk
+20:58
+so you can click on show migration details
+21:07
+and see the status here so you can see here the last snapshot
+21:13
+happened 27 minutes ago under the replication history you can
+21:19
+see the cycle and in the test clone and cut over
+21:24
+history you can see the status of the test clone
+21:30
+so this will take around two minutes for
+21:34
+getting in the ready state so you can see here
+21:39
+the status is complete if i go back to my overview sorry if i
+21:44
+go back to the migrations you can see that the
+21:49
+clone completed just now this is ready for the
+21:54
+cut over but before i do a cut over let's go to vm instances and see now we
+21:59
+have the gcp window windows vm ready for the rdp
+22:05
+let's try to rdp into this vm and check whether we
+22:10
+are able to do an rdp or not download the rdp file i've already
+22:15
+downloaded it so i can do a cancel here and let's try to log in
+22:25
+so you can see the gcp vm has also started coming up
+22:29
+on the other window you can see this is the aws vm which is still active like
+22:35
+for example if i go and click anywhere it is still showing up as active so
+22:40
+meanwhile our vms are up and running just loading
+22:46
+let's go back to migrate to virtual machine
+22:50
+let's begin the test clone and in the background you can see
+22:56
+my rhl clones are also ready so if i go back to my windows
+23:02
+sorry if i go back to my vm instances i can see my rhlvm
+23:08
+1 and vm 2 both of them are now showing as running so i can go and test
+23:14
+them so let's test them
+23:18
+just checking here the firewall rules so currently my http traffic is off let
+23:26
+me just quickly edit it going back here enabling the http
+23:36
+traffic okay so now let's
+23:43
+try and check whether we are able to get the
+23:46
+hello world message from these vms or not
+23:49
+so this is my gcp vm one and
+23:56
+the ip address of the second vm let's check that as well
+24:04
+so this is coming up active so
+24:09
+now both my vms vm one and my vm two both of
+24:14
+them are active meanwhile if i go back to my ec2
+24:19
+so these two vms sorry these two vms let's
+24:23
+check for them okay so let's do a refresh here so this
+24:27
+is active and if i do a refresh here this tool is active
+24:32
+so both
+24:33
+my aws and my gcp vms are now in the active state
+24:39
+so this concludes that we are able
+24:44
+to login into all of our vms i'm fine with the connections and everything now
+24:49
+i can go into my migrations tab again under m2vm
+24:54
+and i can do a cut over for all the three vms
+24:59
+so i'll confirm this because i've done my testing and everything
+25:03
+so this message says cut over fair because we already have the vms which
+25:08
+are created on uh while we did the test clone so you can simply go up here and
+25:13
+delete them because we are sure that we are able to login into all of them we
+25:17
+have done our testing so these were just for the testing purpose
+25:21
+and once we go back to this page
+25:26
+let's go to migrations once they are deleted we will then begin
+25:32
+with the cutover so let's
+25:37
+wait for the time the deletion completes so we will be notified up here
+25:44
+okay so my test vms are deleted now i can begin the final cutover
+25:53
+so this is going to take around some five seven minutes for this cut
+26:00
+over to begin and complete
+26:03
+meanwhile i'm just refreshing the status
+26:08
+of the instances which are on the ec2 side right now they are all in the
+26:13
+running state and here the cutover is beginning so if
+26:17
+i want i can check the status in the show migration details here
+26:24
+and so you can see now the aws vms are in
+26:29
+the stopped state currently and the cutover history
+26:40
+says it's shutting it down and finally it will begin the final sync so
+26:45
+meanwhile this of this is
+26:49
+shutting down the virtual machines and bringing up the virtual machines on the
+26:53
+gcp side that is the only downtime that we have when we are using m2vm which is
+27:00
+not more than four to five minutes depend it depends
+27:03
+still depends upon the disk size that you have if you have a bigger vm then it
+27:08
+may take some more time but if it's a small vm the downtime is very minimal
+27:15
+okay so now the cutover is completed for all the vms
+27:21
+let's see the details so
+27:26
+the cutover is just finished so my vm is ready
+27:41
+in the vm instances we can see all the three vms up and
+27:45
+ready so you can log in into each of the vms and
+27:49
+see they will be working just as fine as they were on aws and on the aws side we
+27:56
+can see all these three vms are now in the stopped state so if you want you can
+28:00
+go ahead and delete them and that's all so we have completed the
+28:06
+migration of the three virtual machines from aws to gcp using m2vm successfully
