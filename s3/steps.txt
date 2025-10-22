@@ -1,0 +1,282 @@
+Step 1: Set Up a Storage Transfer from AWS to GCP
+
+Turns out, there's a handy service in GCP that can help us transfer data from AWS to GCP!
+Let's set up a transfer in GCP's Storage Transfer Service. This service simply needs a source (AWS S3 bucket) and destination (GCP Cloud Storage bucket) for our data transfer.
+In this step, you're going to:
+Create a new transfer job in GCP's Storage Transfer Service.
+Create a New Transfer Job
+In your Google Cloud dashboard, select the menu icon on the top left hand corner.
+Woah! Welcome to GCP's services menu. GCP organizes services a little different from AWS - main service categories are already categorized in the menu, and you can hover over each one to see the most popular GCP services under each category.
+Select View all products at the bottom of the navigation panel.
+Select Storage from the left hand navigation menu.
+Select Storage Transfer.
+💡 What is Storage Transfer Service?
+Storage Transfer Service is a Google Cloud service designed for transferring data in and out of GCP Cloud Storage (which is like GCP's version of Amazon S3).
+Instead of transferring directly between S3 and GCS, we need this service because cloud providers don't offer native ways to connect to their competitors.
+Storage Transfer Service handles authentication between the two platforms, starts and stops the transfer, and makes sure data transfers correctly. Without it, you'd need to build your own transfer system, which would mean downloading all your data to a computer first, then uploading it again to the other cloud - slow, expensive, and prone to errors!
+In the Storage Transfer Service console, select CREATE TRANSFER JOB.
+Configure Source and Destination
+Now, let's set up the source and destination for our transfer job!
+In the Get started section:
+Set Source type to Amazon S3 bucket.
+Set Destination type to Google Cloud Storage.
+Under Scheduling mode, select Batch.
+💡 What is Batch scheduling?
+Batch scheduling means a one-time or scheduled transfer of data. It's great for migrating large datasets or periodic backups.
+The other option, Event-driven transfer, automatically transfers data whenever the source bucket gets a new or updated object. Event-driven transfer is ideal for real-time synchronization but comes with a few extra steps.
+Select NEXT STEP.
+Super cooooool! You've set up the basic settings for your transfer job.
+Specify S3 Bucket Name
+Next up, let's tell Storage Transfer Service which S3 bucket to use as the data source.
+In the Bucket or folder field, enter your S3 bucket's name:
+nextwork-data-transfer-source-
+💡 Extra for Experts: What are the CloudFront and Managed private network settings under 'Bucket or folder'?
+Google Storage Transfer Service includes these options because it's also designed to handle a wide range of enterprise transfer scenarios, not just simple bucket-to-bucket transfers.
+CloudFront domain is a setting for the organizations that use CloudFront to distribute their content globally. Connecting to a CloudFront distribution instead of directly to S3 can actually improve transfer speeds and reduce costs, especially for international transfers with terabytes of data.
+Managed private network is available because many enterprises need to transfer sensitive data that must never go through the public internet for security or compliance reasons. This option lets you create a secure private connection between GCP and AWS using tools like VPC peering or Direct Connect.
+Configure Credentials
+Now that GCP knows which S3 bucket it should connect to, it's high time we give GCP the permission to access it.
+Still in your Storage Transfer setup, select AWS IAM Role for Identity Federation under Credentials.
+💡 What is identity federation?
+Identity federation creates a secure trust relationship between cloud providers. It lets GCP temporarily get access to AWS resources without permanent credentials.
+You create an IAM role in AWS with S3 permissions and let GCP Transfer Service to use that role. When GCP presents its identity to AWS, AWS will issue temporary credentials based on this role.
+These credentials automatically expire after use - much more secure than sharing permanent access keys!
+
+💡 Extra for Experts: How do IAM roles work with federation?
+While IAM roles are permanent, federation access is temporary. AWS grants Storage Transfer Service short-lived credentials (15-60 minutes) for each session. Once those 15-60 minutes are up, Storage Transfer Service is back to having no access to AWS until it makes its next request for data!
+Fantastic! You've set up the S3 source for your transfer job.
+In the next step, we'll create an IAM role in AWS that GCP can use to access your S3 bucket.
+STEP 2: Grant Google Storage Transfer Access to AWS
+To securely access your S3 bucket from GCP, we need to create an IAM role in AWS. This role will grant GCP's Storage Transfer Service the permission to read data from your S3 bucket.
+In this step, you're going to:
+Create a custom IAM role for GCP.
+Navigate to IAM
+Let's head to the IAM console to create our role.
+Head back to the AWS Management Console
+In the search bar, type IAM and select IAM.
+Create a Custom IAM Role
+In the IAM console, select Roles in the left-hand navigation panel.
+Select Create role.
+Under Select trusted entity, choose Custom trust policy.
+💡 Why Custom trust policy?
+We're choosing Custom trust policy because it allows us to define exactly who can assume this IAM role. In this case, we want to specify that only GCP's Storage Transfer Service can assume this role.
+We need to define a custom trust policy that lets GCP to assume this role!
+In the Custom trust policy editor, replace the default policy with the following JSON policy:
+{ "Version": "2012-10-17", "Statement": [ { "Effect": "Allow", "Principal": { "Federated": "accounts.google.com" }, "Action": "sts:AssumeRoleWithWebIdentity", "Condition": { "StringEquals": { "accounts.google.com:sub": "" } } } ] }
+💡 What is a trust policy?
+A trust policy tells AWS that external services or users are allowed to use this IAM role.
+In our case, this trust policy tells AWS to trust requests coming from Storage Transfer in your GCP project (GCP calls accounts "projects").
+
+💡 How would I know what to write for the custom trust policy?
+You can actually find the policy we're using above in GCP's documentation!
+Retrieving the subject ID
+Before we can finish creating this policy, we need to replace the placeholder for SUBJECT_ID.
+💡 Why do we need a subject ID?
+A subject ID is how AWS knows whether a request to transfer data is really coming from your GCP project's Storage Transfer, and not from someone else's project.
+
+💡 Extra for Experts: Ooo, how does a subject ID work?
+Within each GCP project, Google automatically creates special service accounts for every GCP service. A service account is what gives a service (like Storage Transfer) the permission to do something in your GCP account.
+Every service account in every GCP project has a unique ID, called the subject ID! This means Storage Transfer will have a different service account and subject ID from the other services in your account. The Storage Transfer in your project will also have a different service account and subject ID from Storage Transfer in other people's projects.
+To retrieve the subject ID, head to this page in Storage Transfer's official documentation: https://cloud.google.com/storage-transfer/docs/reference/rest/v1/googleServiceAccounts/get.
+💡 What is the googleServiceAccounts.get method?
+This method is like a profile search for a service account. When you call this method with your project ID, it returns details about the unique service account that handles your GCP account's Storage Transfer Service.
+You'll see a panel on the right called Try this method.
+💡 What does this panel do?
+This panel lets you use the API in a visual interface, so you don't need to learn how to call the API with code!
+To use this method, we need your GCP project ID.
+Head back to your Storage Transfer tab in GCP.
+Select your project (e.g., My First Project).
+Copy the ID of your project.
+Go back to the Google Service Accounts API page.
+Paste your project ID into the projectIds field.
+Select the Execute button.
+You might be asked to log in to Google again for verification that you have permissions to that project. If so, select the same Google account you used to sign up.
+Select Continue.
+Click Allow to grant Google APIs Explorer permission to your Google Account.
+💡 Why is Google APIs Explorer asking for permission?
+Google APIs Explorer is asking for temporary access to your Google account so it can find information about the service account and give you the subject ID for your Google Cloud project.
+The permission will automatically expire after 7 days, and you can remove it sooner if you want to. Once we have the subject ID, we won't need to use this tool again for this project.
+You'll be taken back to the API page.
+Scroll down to the Response section.
+Copy the subjectId from the response.
+Go back to your IAM role creation tab in AWS.
+Replace the placeholder SUBJECT_ID in the trust policy below with the subjectId you just copied.
+{ "Version": "2012-10-17", "Statement": [ { "Effect": "Allow", "Principal": { "Federated": "accounts.google.com" }, "Action": "sts:AssumeRoleWithWebIdentity", "Condition": { "StringEquals": { "accounts.google.com:sub": "" } } } ] }
+Now we're ready!
+Paste the modified code into the Custom trust policy editor in IAM.
+Select Next.
+Attach Permissions Policy
+Now, let's attach the AmazonS3ReadOnlyAccess policy to our role.
+In the Add permissions page, in the search bar, type S3ReadOnly
+Select the policy named AmazonS3ReadOnlyAccess.
+💡 What is AmazonS3ReadOnlyAccess?
+AmazonS3ReadOnlyAccess is an AWS policy that grants read-only access to all S3 buckets in your AWS account. For this project, read-only access is enough because we're just backing up data from S3 to GCS (and read-only access also includes retrieving objects). We don't need to modify or delete any data in the S3 bucket.
+This follows the principle of least privilege in cloud architecture, where we grant only the necessary permissions.
+Select Next.
+In the Role details page, under Role name, enter nextwork-data-transfer-gcp-role.
+In the Description, add the following text:
+Role that grants my GCP project's Storage Transfer Service Read Only access to my S3 buckets. Created this IAM role as a part of NextWork's multi-cloud project.
+Review the policy summary - make sure it includes AmazonS3ReadOnlyAccess.
+Select Create role.
+Yay! You should see a success message that your role has been created 👌
+Select View role to see the details of the role you just created.
+Beautiful! You've created an IAM role for GCP access.
+In the next step, we'll use this role's to complete the S3 source configuration in GCP.
+STEP 3: Transfer Your Objects from S3 to GCS
+Now that we have our IAM role set up, let's go back to GCP Storage Transfer Service and complete the S3 source configuration.
+In this step, you're going to:
+Finish setting up your transfer in Storage Transfer Service.
+Run the transfer job 🏃‍♀️
+See your files get backed up from AWS to GCP!
+Continue setting up GCP Storage Transfer Service
+Now that we've created the role, what's next?
+Let's copy the role's ARN (Amazon Resource Number, which is like its unique ID) to use it in our Storage Transfer setup.
+Still in the IAM console, copy the Role ARN.
+Go back to your Storage Transfer job in GCP.
+Under Credentials, paste the IAM role ARN you copied into the Role ARN field.
+💡 Extra for Experts: What are these filtering options for?
+These checkboxes let you control exactly which files get transferred from your S3 bucket to GCP Cloud Storage.
+The Filter by prefix option lets you transfer only files that start with specific characters or folders (like only transferring files in a "backup/" folder).
+The Filter by last modified time option lets you transfer only files that were created or updated within a specific timeframe (like only transferring files modified in the last 7 days).
+By leaving both unchecked, you're telling GCP to transfer all files from your S3 bucket - regardless of their location or when they were last updated.
+Select NEXT STEP.
+Create a GCS Bucket
+In the Choose a destination section, select BROWSE to set up a destination bucket in GCS i.e. GCP Cloud Storage.
+Select the bucket icon to Create new bucket.
+💡 What are GCS buckets?
+Just like S3 buckets, GCS buckets are folders for storing your objects in Google Cloud Storage.
+In the Create a bucket form, under Name your bucket, give your GCS bucket a name.
+nextwork-data-transfer-destination-gcp-
+Select CONTINUE.
+Now, let's choose where to store your data in GCP.
+Under Choose where to store your data, select Region for the location type.
+💡 What are the different location types?
+Think of these bucket location types like different backup strategies for your data:
+Region is the most cost-effective option (data is only stored in one region) and works well when you know exactly where your data needs to be stored, perhaps for compliance or performance reasons.
+Multi-region automatically replicates your data across multiple regions, which gives you higher availability and protection against regional outages. It costs more but also gives you better resilience.
+Dual-region stores your data in exactly two regions that you choose, which is a great in-between option (between region and multi-region). It's ideal for disaster recovery while making sure data is kept local to the regions you choose.
+For our project, we're using Region - this keeps our solution simple and sticks to just one region!
+Pick a region that is geographically close to your S3 bucket's region - this can help improve transfer speeds!
+Select CONTINUE again.
+Choose Storage Class
+Let's choose a storage class for your GCS bucket.
+Under Choose a storage class, select the Standard class.
+💡 What are storage classes?
+GCP Cloud Storage offers different storage classes based on how frequently you'll be accessing your data. Think of a storage class as a different pricing plan for your S3 bucket.
+Standard is for frequently accessed data with high performance and availability.
+Nearline is for data accessed less frequently (e.g., once a month). Lower cost than Standard, with slight retrieval latency (which means it takes a big longer for you to retrieve your data).
+Coldline is for infrequently accessed data (e.g., once a quarter). Even lower cost than Nearline, with even higher retrieval latency.
+Archive is for long-term archival data with very infrequent access (e.g., less than once a year). Lowest cost, with the highest retrieval latency (hours).
+
+For our project, Standard class is suitable as we'll be accessing the transferred data.
+Select CONTINUE.
+Configure Access Control and Protection
+Next up in your GCP storage bucket setup, let's configure access control and data protection settings.
+Under Choose how to control access to objects, leave the default settings and select CONTINUE.
+💡 Extra for Experts: What are these access control settings?
+These are the security settings that determine who can access your files in your GCS bucket. They're designed to keep your data secure by default.
+Prevent public access means your data won't be accessible to random people on the internet. It's turned on by default because most cloud storage shouldn't be public-facing (unlike, say, website hosting).
+Enforce public access prevention is like an extra safety lock - it stops you or someone on your team from accidentally making things public through other settings.
+Access control (Uniform) is the simpler approach to permissions. Instead of setting different access rules for every single file (which gets messy fast), you just set permissions at the bucket level and everything inside inherits those rules.
+The Fine-grained option gives you more flexibility to say "this person can access this file but not that one." It's more work to manage, but useful if you need that level of control.
+Under Choose how to protect object data, untick the Soft delete policy.
+💡 Why are we unticking this policy?
+You should untick "Soft delete policy" to keep things simple when you're ready to delete your resources. While it's a nice safety net in production (it lets you recover deleted files), we don't really need it for a shorter-term project!
+Select CREATE.
+In the Public access prevention popup, select CONFIRM.
+💡 What is this popup?
+This is Google Cloud confirming your bucket's security settings. It's telling you that your bucket will be private by default - no public access!
+You'd usually only disable this if you're hosting public content like a website. The Enforce public access prevention checkbox adds extra protection against accidental public sharing in the future - even if someone tries to make one of the objects public, the individual object will be private until you disable this checkbox.
+You've created your bucket! Now, click SELECT at the bottom of the page.
+Select NEXT STEP.
+Let's gooooo! You've set up a new GCP Cloud Storage bucket as your transfer's destination.
+Almost there now - let's schedule our transfer job 🗓️
+Schedule the Transfer Job
+Since we're performing a batch transfer for this project, we only need to run the job once to migrate the data from S3 to GCP Cloud Storage.
+In the Choose when to run job section, select Run once and Starting now.
+Select NEXT STEP.
+Now we're ready to name our transfer job.
+In the Identify your job section, enter the description:
+Data transfer from S3 bucket to GCP. Created this transfer job as a part of NextWork's multi-cloud project.
+Review the other settings in this section, such as Manifest file and How to handle metadata. For this project, we'll leave the default settings.
+💡 Extra for Experts: What do these settings control?
+These settings determine how your files are transferred from AWS to GCP. The defaults are optimized for a standard migration where you're just moving data without changing it.
+Instead of moving all files from your S3 bucket, you can create a manifest file that specifically lists only the files you want to transfer. This option is unchecked by default, so the transfer job will copy everything in your source bucket. If you enabled it, you'd provide a file with exact paths to the specific objects you want to transfer.
+The Storage class setting tells the transfer to use whatever storage class you set up in your destination bucket.
+For Time created, it's set to not preserve the original creation timestamps from your source files. The transferred files will get new timestamps when they arrive in GCP.
+You can also keep the default settings for When to overwrite and When to delete.
+💡 Extra for Experts: What are these additional options?
+These settings control what happens to files during the transfer:
+When to overwrite asks whether the transfer should be skipped for some files if there's an existing file with the same name in the GCS bucket:
+Never would skip all files that have the same name, even if the content is different.
+Always would replace the GCP file with the S3 version, even if the content is identical, which can waste bandwidth and time (but is a great option if you want to be sure that everything in GCP is exactly as it is in the source).
+If different offers a good balance - updating files in GCP that have updated in S3.
+
+When to delete is set to Never by default, which keeps all files in both locations. The other options let you automatically delete files from the source after transfer (good for migrations) or delete files from the destination that aren't at the source (good for keeping buckets in sync).
+Finally, we can also keep the default settings for Logging and Notification options.
+💡 Extra for Experts: What are these additional options?
+Logging options are off by default to avoid extra costs. If enabled, Cloud Logging would track detailed information about each file transferred, useful for troubleshooting but adds costs.
+Notification options are also disabled by default. Enabling this would send automated updates about your transfer job through Google's Pub/Sub service, which is helpful for triggering other processes when transfers complete.
+Select CREATE.
+Ayooooo! This is it! You've created your transfer job.
+Now, let's monitor the job and verify that the data is transferred successfully.
+Monitor the Transfer Job
+In the Storage Transfer Service interface, you should see your newly created job.
+Keep an eye out for the Operation status of the job. Wait until the Operation status changes to Success.
+This might take some time depending on the amount of data you are transferring, and the regions you've picked for your S3 vs GCP Storage buckets! On average, it should take less than a minute.
+Verify Data Transfer
+Once the job status is Success, let's check that the files have been transferred to your GCP Cloud Storage bucket.
+In the GCP console, select the navigation menu.
+Hover over Cloud Storage.
+Select Buckets from the left-hand menu.
+Click into your Cloud Storage bucket.
+Select the Refresh button.
+You should see the files from your S3 bucket listed in your GCP Cloud Storage bucket!
+WOOHOOO! You've just transferred data from AWS S3 to GCP Cloud Storage.
+That's AMAZING!
+Want to experience the full power of Storage Transfer Service?
+Here's your chance to go beyond just batch transferring all your files at once!
+Your secret mission, should you choose to accept it, is to create a manifest file to selectively transfer specific files between AWS and GCP. This advanced technique is essential for enterprise migrations where you need control over what data moves between environments.
+In this secret mission, you're going to:
+Create a custom manifest file that lists exactly which files to transfer
+Configure Storage Transfer Service to use your manifest
+Run a targeted transfer that moves only specific files
+Showcase advanced multi-cloud migration skills in your documentation!
+It's time to clean up the resources we created - let's avoid any unnecessary costs!
+Resources to delete:
+Delete the Transfer Jobs in GCP Storage Transfer Service.Delete the GCP Cloud Storage bucket.Delete the IAM Role in AWS IAM.Delete the S3 bucket in AWS S3.Delete the manifest files from your local computer (if you did the secret mission 💎)
+Still in your Storage Transfer job, select DELETE JOB.
+Copy and paste the automatically assigned name.
+Select DELETE.
+Back in the Storage Transfer home page, you can also delete any other transfers you've set up by selecting the checkbox next to their name.
+Select DELETE.
+Type in the job's assigned name, and select DELETE.
+In the GCP console, open the navigation menu and hover over Cloud Storage.
+Select Buckets from the left-hand menu.
+Select your GCP Cloud Storage bucket (nextwork-data-transfer-destination-gcp-yourname).
+Select DELETE at the top of the page.
+Confirm the deletion by typing the bucket name, and selecting DELETE.
+Now let's jump into the AWS Management Console!
+Head to the IAM console.
+Select Roles from the left-hand menu.
+Select the role you created (nextwork-data-transfer-gcp-role).
+Select Delete.
+Confirm the deletion by typing the role name (nextwork-data-transfer-gcp-role).
+Select Delete.
+In the AWS Management Console, navigate to S3.
+Select General purpose buckets from the left-hand menu.
+Select the button next to your S3 bucket (nextwork-data-transfer-source-yourname).
+Select Empty.
+Confirm the deletion by typing permanently delete
+Select Delete objects.
+Once all the items have been removed, select General purpose buckets from the left-hand menu again.
+Select the button next to your bucket, and this time select Delete.
+Enter the bucket name, and select Delete bucket.
+Remove the file titled manifest.csv from your local computer.
+Type confirm and select Delete.
+Have you deleted everything?
+Don't forget to check off everything in your Resources to delete checklist!
+🗑️ Jump to your checklist to double check it now.
+
+You've just set up a multi-cloud data transfer solution between AWS and GCP!
+
