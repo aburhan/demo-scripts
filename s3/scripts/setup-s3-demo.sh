@@ -292,7 +292,7 @@ main() {
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     log_success "Bucket created: ${BUCKET_NAME}"
-    log_info "Next: ./get-s3-object-details.sh ${BUCKET_NAME} csv > migration-inventory.csv
+    log_info "Next: ./get-s3-object-details.sh ${BUCKET_NAME} csv > migration-inventory.csv"
     echo ""
 }
 

@@ -174,7 +174,7 @@ get_object_details() {
     local storage_class=$(jq -r '.StorageClass // "STANDARD"' "$temp_file")
     local content_type=$(jq -r '.ContentType // "N/A"' "$temp_file")
     local server_side_encryption=$(jq -r '.ServerSideEncryption // "None"' "$temp_file")
-    local metadata=$(jq -r '.Metadata // {}' "$temp_file")
+    local metadata=$(jq -c '.Metadata // {}' "$temp_file")
     local restore_status=$(jq -r '.Restore // "N/A"' "$temp_file")
     local replication_status=$(jq -r '.ReplicationStatus // "N/A"' "$temp_file")
     local object_lock_mode=$(jq -r '.ObjectLockMode // "N/A"' "$temp_file")
@@ -197,7 +197,7 @@ get_object_details() {
   "Size": $size,
   "SizeHuman": "$(numfmt --to=iec-i --suffix=B $size 2>/dev/null || echo "${size}B")",
   "LastModified": "$last_modified",
-  "ETag": $etag,
+  "ETag": "$etag",
   "StorageClass": "$storage_class",
   "ContentType": "$content_type",
   "VersionId": "${version_id:-null}",
@@ -257,7 +257,7 @@ if [ "$VERSIONING_STATUS" = "Enabled" ]; then
         --bucket "$BUCKET_NAME" \
         --region "$REGION" \
         --output json)
-    
+
     # Process versions
     VERSION_COUNT=$(echo "$OBJECTS" | jq '.Versions | length')
     DELETE_MARKER_COUNT=$(echo "$OBJECTS" | jq '.DeleteMarkers | length // 0')
